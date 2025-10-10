@@ -1,0 +1,12 @@
+float64 alpha_r_fr
+float64 alpha_b_fr
+float64 z_l_fr
+float64 alpha_r_fl
+float64 alpha_b_fl
+float64 z_l_fl
+float64 alpha_r_rr
+float64 alpha_b_rr
+float64 z_l_rr
+float64 alpha_r_rl
+float64 alpha_b_rl
+float64 z_l_rl
