@@ -24,6 +24,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Stm32Data.msg"
   "msg/DebugParameter.msg"
   "msg/ObstacleProximityLog.msg"
+  "msg/ShoulderCommand.msg"
+  "msg/GaitClock.msg"
   DEPENDENCIES geometry_msgs builtin_interfaces
 )
 
