@@ -87,8 +87,8 @@ class ShoulderGait(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = JoySubscriber()
-    rclpy.spin(node)  # Keep the node running
+    node = ShoulderGait()
+    rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 

@@ -9,8 +9,9 @@ from action_msgs.msg import GoalStatusArray
 from sensor_msgs.msg import Joy
 from builtin_interfaces.msg import Time as RosTime
 
-from my_parameters.msg import JoystickParameters  # Your existing custom message
-from my_parameters.msg import ObstacleProximityLog  # Your logging message
+from my_parameters.msg import JoystickParameters  
+from my_parameters.msg import ObstacleProximityLog  
+from my_parameters.msg import GaitClock # new
 
 
 class CmdVelToJoystick(Node):
@@ -39,6 +40,7 @@ class CmdVelToJoystick(Node):
         # Publishers
         self.publisher_ = self.create_publisher(JoystickParameters, '/joystick_command', 20)
         self.obstacle_log_pub = self.create_publisher(ObstacleProximityLog, '/obstacle_log', 20)
+        self.gait_pub = self.create_publisher(GaitClock, '/gait_clock', 20)  # new added 
 
     def joy_callback(self, msg):
         button6 = msg.buttons[6]
@@ -147,6 +149,35 @@ class CmdVelToJoystick(Node):
         log_msg.stamp = self.get_clock().now().to_msg()
         log_msg.turn_count = self.turn_counter
         self.obstacle_log_pub.publish(log_msg)
+    
+     # ====== Gait clock publisher ====== - new added -
+    def publish_gait_clock(self):
+        now = self.get_clock().now()
+        dt = (now - self.last_clock_time).nanoseconds * 1e-9
+        self.last_clock_time = now
+
+        # Map "velocity proxy" -> period T, then omega
+        # Keep the mapping consistent with the shoulder node parameters.
+        T_base = 0.8
+        k_T = -0.4
+        T_min, T_max = 0.45, 1.2
+        v = float(self.alpha_b)
+        period = max(T_min, min(T_max, T_base + k_T * v))
+        omega = 2.0 * math.pi / max(1e-6, T)
+
+        # Integrate phase while enabled
+        enabled = bool(self.override_enabled and self.goal_active)
+        if enabled:
+            self.phase = (self.phase + omega * dt) % (2.0 * math.pi)
+
+        msg = GaitClock()
+        msg.stamp = now.to_msg()
+        msg.enabled = enabled
+        msg.omega = float(omega)
+        msg.phase = float(self.phase)
+        msg.T = float(period)
+        self.gait_pub.publish(msg)
+
 
     def stop_robot(self):
         stop_msg = JoystickParameters()
