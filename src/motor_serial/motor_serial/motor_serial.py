@@ -232,7 +232,7 @@ class MotorSerialNode(Node):
 
         reset_int = int(self.joystick_data.reset) if self.joystick_data else 0
         save_int = int(self.joystick_data.save) if self.joystick_data else 0
-        data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators
+        data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators + bytearray([0])
 
         #if len(data) != 16:  # Adjust length if needed
         #    return data  # or None if strict
