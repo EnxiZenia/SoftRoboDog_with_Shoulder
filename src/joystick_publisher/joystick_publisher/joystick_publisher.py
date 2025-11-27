@@ -90,9 +90,9 @@ class JoySubscriber(Node):
             self.velocity = math.pi/12
 
 
-        if msg.buttons[6] == 1 and msg.buttons[7] == 0:
+        if msg.buttons[0] == 1:
             self.enabled = False
-        elif msg.buttons[6] == 0 and msg.buttons[7] == 1:
+        elif msg.buttons[2] == 1:
             self.enabled = True
 
 
@@ -105,14 +105,14 @@ class JoySubscriber(Node):
         msg_array.enabled = self.enabled
 
         self.publisher_.publish(msg_array)
-        # self.get_logger().info(
-        #     f'Publishing: turn_command={msg_array.turn_command}, '
-        #     f'turn_angle={msg_array.turn_angle}, '
-        #     f'velocity={msg_array.velocity}, '
-        #     f'enabled={msg_array.enabled}, '
-        #     f'position_command={msg_array.position_command}, '
-        #     f'position_direction={msg_array.position_direction}'
-        # )
+        #self.get_logger().info(
+        #    f'Publishing: turn_command={msg_array.turn_command}, '
+        #    f'turn_angle={msg_array.turn_angle}, '
+        #    f'velocity={msg_array.velocity}, '
+        #    f'enabled={msg_array.enabled}, '
+        #    f'position_command={msg_array.position_command}, '
+        #    f'position_direction={msg_array.position_direction}'
+        #)
 
 def main(args=None):
     rclpy.init(args=args)

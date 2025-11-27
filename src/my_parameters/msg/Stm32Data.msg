@@ -14,4 +14,9 @@ int32 motor1_rl
 int32 motor2_rl
 int32 motor3_rl
 
+int32 step_fr
+int32 step_fl
+int32 step_rl
+int32 step_rr
+
 bool enabled

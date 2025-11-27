@@ -6,13 +6,13 @@ from my_parameters.msg import Stm32Data
 
 class MotorCommandPublisher(Node):
     def __init__(self):
-        super().__init__('motor_command_subscriber')
+        super().__init__('stm32_sender')
         
 
         self.subscription = self.create_subscription(
             MotorParameters,  
             '/motor_command',
-            self.function,
+            self.callback_function,
             20
         )
         self.publisher_ = self.create_publisher(Stm32Data, '/StmData', 20)
@@ -33,6 +33,12 @@ class MotorCommandPublisher(Node):
         self.motor2_rl = 0
         self.motor3_rl = 0
 
+        # adding servo motor commands
+        self.step_fr = 0
+        self.step_fl = 0
+        self.step_rl = 0
+        self.step_rr = 0
+
         self.pretight1_fr = 0
         self.pretight2_fr = 0
         self.pretight3_fr = 0
@@ -49,46 +55,91 @@ class MotorCommandPublisher(Node):
         self.pretight2_rl = 0
         self.pretight3_rl = 0
 
-    def function(self, msg):
+    def callback_function(self, msg):
+
+        # if msg.move == True:
+        #     self.motor1_fr = (msg.alpha_a_fr * 180/math.pi) + 90
+        #     self.motor2_fr = (msg.alpha_b_fr * 180/math.pi) + 90
+        #     self.motor3_fr = (msg.alpha_c_fr * 180/math.pi) + 90
+
+        #     self.motor1_fl = (msg.alpha_a_fl * 180/math.pi) + 90
+        #     self.motor2_fl = (msg.alpha_b_fl * 180/math.pi) + 90
+        #     self.motor3_fl = (msg.alpha_c_fl * 180/math.pi) + 90
+
+        #     self.motor1_rr = (msg.alpha_a_rr * 180/math.pi) + 90
+        #     self.motor2_rr = (msg.alpha_b_rr * 180/math.pi) + 90
+        #     self.motor3_rr = (msg.alpha_c_rr * 180/math.pi) + 90
+
+        #     self.motor1_rl = (msg.alpha_a_rl * 180/math.pi) + 90
+        #     self.motor2_rl = (msg.alpha_b_rl * 180/math.pi) + 90
+        #     self.motor3_rl = (msg.alpha_c_rl * 180/math.pi) + 90
+
+        #     self.step_fr = (msg.step_fr * 180/math.pi) + 90
+        #     self.step_fl = (msg.step_fl * 180/math.pi) + 90
+        #     self.step_rl = (msg.step_rl * 180/math.pi) + 90
+        #     self.step_rr = (msg.step_rr * 180/math.pi) + 90
+
+        # else:
+        #     self.motor1_fr =  90
+        #     self.motor2_fr =  90
+        #     self.motor3_fr =  90
+
+        #     self.motor1_fl =  90
+        #     self.motor2_fl =  90
+        #     self.motor3_fl =  90
+
+        #     self.motor1_rr =  90
+        #     self.motor2_rr =  90
+        #     self.motor3_rr =  90
+
+        #     self.motor1_rl =  90
+        #     self.motor2_rl =  90
+        #     self.motor3_rl =  90   
 
         if msg.move == True:
-            self.motor1_fr = (msg.alpha_a_fr * 180/math.pi) + 90
-            self.motor2_fr = (msg.alpha_b_fr * 180/math.pi) + 90
-            self.motor3_fr = (msg.alpha_c_fr * 180/math.pi) + 90
+            self.motor1_fr = msg.alpha_a_fr / ( 2 * math.pi )
+            self.motor2_fr = msg.alpha_b_fr / ( 2 * math.pi )
+            self.motor3_fr = msg.alpha_c_fr / ( 2 * math.pi )
 
-            self.motor1_fl = (msg.alpha_a_fl * 180/math.pi) + 90
-            self.motor2_fl = (msg.alpha_b_fl * 180/math.pi) + 90
-            self.motor3_fl = (msg.alpha_c_fl * 180/math.pi) + 90
+            self.motor1_fl = msg.alpha_a_fl / ( 2 * math.pi )
+            self.motor2_fl = msg.alpha_b_fl / ( 2 * math.pi )
+            self.motor3_fl = msg.alpha_c_fl / ( 2 * math.pi )
 
-            self.motor1_rr = (msg.alpha_a_rr * 180/math.pi) + 90
-            self.motor2_rr = (msg.alpha_b_rr * 180/math.pi) + 90
-            self.motor3_rr = (msg.alpha_c_rr * 180/math.pi) + 90
+            self.motor1_rr = msg.alpha_a_rr / ( 2 * math.pi )
+            self.motor2_rr = msg.alpha_b_rr / ( 2 * math.pi )
+            self.motor3_rr = msg.alpha_c_rr / ( 2 * math.pi )
 
-            self.motor1_rl = (msg.alpha_a_rl * 180/math.pi) + 90
-            self.motor2_rl = (msg.alpha_b_rl * 180/math.pi) + 90
-            self.motor3_rl = (msg.alpha_c_rl * 180/math.pi) + 90
+            self.motor1_rl = msg.alpha_a_rl / ( 2 * math.pi )
+            self.motor2_rl = msg.alpha_b_rl / ( 2 * math.pi )
+            self.motor3_rl = msg.alpha_c_rl / ( 2 * math.pi )
+
+            self.step_fr = msg.step_fr*180/math.pi
+            self.step_fl = msg.step_fl*180/math.pi
+            self.step_rl = msg.step_rl*180/math.pi
+            self.step_rr = msg.step_rr*180/math.pi
+
         else:
-            self.motor1_fr =  90
-            self.motor2_fr =  90
-            self.motor3_fr =  90
+            self.motor1_fr =  0
+            self.motor2_fr =  0
+            self.motor3_fr =  0
 
-            self.motor1_fl =  90
-            self.motor2_fl =  90
-            self.motor3_fl =  90
+            self.motor1_fl =  0
+            self.motor2_fl =  0
+            self.motor3_fl =  0
 
-            self.motor1_rr =  90
-            self.motor2_rr =  90
-            self.motor3_rr =  90
+            self.motor1_rr =  0
+            self.motor2_rr =  0
+            self.motor3_rr =  0
 
-            self.motor1_rl =  90
-            self.motor2_rl =  90
-            self.motor3_rl =  90   
+            self.motor1_rl =  0
+            self.motor2_rl =  0
+            self.motor3_rl =  0 
 
 
-        if msg.pre_tight == True:
-            const = 10
-        else:
-            const = 0
+        # if msg.pre_tight == True:
+        #     const = 10
+        # else:
+        #     const = 0
 
         # self.pretight1_fr = 3 + const
         # self.pretight2_fr = 5 + const
@@ -106,37 +157,42 @@ class MotorCommandPublisher(Node):
         # self.pretight2_rl = 1 + const
         # self.pretight3_rl = 7 + const
 
-        self.pretight1_fr = -2 + const
-        self.pretight2_fr = -4 + const
-        self.pretight3_fr = -1 + const
+        if msg.pre_tight == True:
+            const = 1 # offset in turns
+        else:
+            const = 0
 
-        self.pretight1_fl = -2 + const
-        self.pretight2_fl = 0 + const
-        self.pretight3_fl = 0 + const
+        self.pretight1_fr = -2 /360 + const
+        self.pretight2_fr = -4 /360 + const
+        self.pretight3_fr = -1 /360 + const
+
+        self.pretight1_fl = -2 /360 + const
+        self.pretight2_fl = 0 /360 + const
+        self.pretight3_fl = 0 /360 + const
         
-        self.pretight1_rr = 6 + const
-        self.pretight2_rr = -1 + const
-        self.pretight3_rr = 13 + const
+        self.pretight1_rr = 6 /360 + const
+        self.pretight2_rr = -1 /360 + const
+        self.pretight3_rr = 13 /360 + const
 
-        self.pretight1_rl = 0 + const
-        self.pretight2_rl = 3 + const
-        self.pretight3_rl = 10 + const
+        self.pretight1_rl = 0 /360 + const
+        self.pretight2_rl = 3 /360 + const
+        self.pretight3_rl = 10 /360 + const
 
-        self.motor1_fr -=  self.pretight1_fr
-        self.motor2_fr -=  self.pretight2_fr
-        self.motor3_fr -=  self.pretight3_fr
+        # self.motor1_fr -=  self.pretight1_fr
+        # self.motor2_fr -=  self.pretight2_fr
+        # self.motor3_fr -=  self.pretight3_fr
 
-        self.motor1_fl -=  self.pretight1_fl
-        self.motor2_fl -=  self.pretight2_fl
-        self.motor3_fl -=  self.pretight3_fl
+        # self.motor1_fl -=  self.pretight1_fl
+        # self.motor2_fl -=  self.pretight2_fl
+        # self.motor3_fl -=  self.pretight3_fl
 
-        self.motor1_rr -=  self.pretight1_rr
-        self.motor2_rr -=  self.pretight2_rr
-        self.motor3_rr -=  self.pretight3_rr
+        # self.motor1_rr -=  self.pretight1_rr
+        # self.motor2_rr -=  self.pretight2_rr
+        # self.motor3_rr -=  self.pretight3_rr
 
-        self.motor1_rl -=  self.pretight1_rl
-        self.motor2_rl -=  self.pretight2_rl
-        self.motor3_rl -=  self.pretight3_rl 
+        # self.motor1_rl -=  self.pretight1_rl
+        # self.motor2_rl -=  self.pretight2_rl
+        # self.motor3_rl -=  self.pretight3_rl 
         
         msg_array = Stm32Data()
         msg_array.motor1_fr = math.floor(self.motor1_fr)
@@ -154,6 +210,12 @@ class MotorCommandPublisher(Node):
         msg_array.motor1_rl = math.floor(self.motor1_rl)
         msg_array.motor2_rl = math.floor(self.motor2_rl)
         msg_array.motor3_rl = math.floor(self.motor3_rl)
+
+        msg_array.step_fr = math.floor(self.step_fr)
+        msg_array.step_fl = math.floor(self.step_fl)
+        msg_array.step_rl = math.floor(self.step_rl)
+        msg_array.step_rr = math.floor(self.step_rr)
+
         msg_array.enabled = msg.pre_tight
 
         self.publisher_.publish(msg_array)

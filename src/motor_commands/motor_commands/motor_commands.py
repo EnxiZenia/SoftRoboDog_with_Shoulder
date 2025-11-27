@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from my_parameters.msg import JoystickParameters  # Correct import based on your topic info
@@ -14,13 +15,13 @@ class MotorCommandPublisher(Node):
 
 
         # Publisher for motor command
-        self.publisher_ = self.create_publisher(MotorParameters, "motor_command", 20)
+        self.publisher_ = self.create_publisher(MotorParameters, "/motor_command", 20)
         # self.debug_publisher_ = self.create_publisher(DebugParameter, "debug_motor_parameters", 10)
         # Subscription to joystick command
         self.subscription = self.create_subscription(
             JoystickParameters,  
             '/joystick_command',
-            self.function,
+            self.callback_function, 
             20
         )
 
@@ -50,7 +51,7 @@ class MotorCommandPublisher(Node):
         self.alpha_b_rl = 0.0
         self.z_l_rl = 0.0
 
-    def function(self, msg):
+    def callback_function(self, msg):
         # Update reference values based on joystick input
         self.alpha_r_ref = msg.turn_angle if msg.turn_command else msg.position_direction
 
@@ -79,16 +80,49 @@ class MotorCommandPublisher(Node):
 
     def calculate_alpha_abc(self, alpha_r, alpha_b, z_l):
         """ Mathematical calculation for alpha_A, alpha_B, and alpha_C """
-        L_disk = 0.02944
-        R_spool = 0.021
-        R_w = L_disk / math.sqrt(3)
+        # L_disk = 0.02944
+        # R_spool = 0.021
+        # R_w = L_disk / math.sqrt(3)
 
-        alpha_A = -(-R_w * alpha_b * math.cos(-alpha_r) + z_l) / R_spool
-        alpha_B = -(-R_w * alpha_b * math.cos(-alpha_r + (2 * math.pi / 3)) + z_l) / R_spool
-        alpha_C = -(-R_w * alpha_b * math.cos(-alpha_r + (4 * math.pi / 3)) + z_l) / R_spool
+        # alpha_A = -(-R_w * alpha_b * math.cos(-alpha_r) + z_l) / R_spool
+        # alpha_B = -(-R_w * alpha_b * math.cos(-alpha_r + (2 * math.pi / 3)) + z_l) / R_spool
+        # alpha_C = -(-R_w * alpha_b * math.cos(-alpha_r + (4 * math.pi / 3)) + z_l) / R_spool
+
+        L_disk = 0.02944       # Disk side length (m)
+        R_spool = 0.021
+        R_w = L_disk / np.sqrt(3)
+        original_len = 0.15    # Original twisted wire length (m)
+        r = 0.00053 / 2
+
+        # ---- A ----
+        length_A = -R_w * alpha_b * np.cos(-alpha_r) + z_l
+        final_len_A = original_len + length_A
+
+        if length_A < 0:
+            alpha_A = np.sqrt(original_len**2 - final_len_A**2) / r
+        else:
+            alpha_A = 0
+
+        # ---- B ----
+        length_B = -R_w * alpha_b * np.cos(-alpha_r + 2*np.pi/3) + z_l
+        final_len_B = original_len + length_B
+
+        if length_B < 0:
+            alpha_B = np.sqrt(original_len**2 - final_len_B**2) / r
+        else:
+            alpha_B = 0
+
+        # ---- C ----
+        length_C = -R_w * alpha_b * np.cos(-alpha_r + 4*np.pi/3) + z_l
+        final_len_C = original_len + length_C
+
+        if length_C < 0:
+            alpha_C = np.sqrt(original_len**2 - final_len_C**2) / r
+        else:
+            alpha_C = 0
         
 
-        return alpha_A, alpha_B, alpha_C, 0 #todo shoulder calculations
+        return float(alpha_A), float(alpha_B), float(alpha_C), float(alpha_b)
 
     def update_motor_command(self):
         # Calculate elapsed time
