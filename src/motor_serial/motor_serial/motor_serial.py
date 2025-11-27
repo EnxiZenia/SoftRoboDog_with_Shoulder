@@ -56,7 +56,7 @@ class MotorSerialNode(Node):
 
     def float_to_byte(self, x):
         x = max(-127, min(127, int(x)))
-        return x + 127 
+        return x + 127
 
     def stm_data_callback(self, msg):
         """ Update motor commands """
