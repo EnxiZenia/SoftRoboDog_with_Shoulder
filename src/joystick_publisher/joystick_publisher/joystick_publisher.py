@@ -21,6 +21,8 @@ class JoySubscriber(Node):
         self.velocity_min = 0.2
         self.velocity_max = 1.0
         self.velocity_step = 0.05
+        self.reset = 0
+        self.save = 0
 
         self.publisher_ = self.create_publisher(JoystickParameters,
                                                 '/joystick_command',
@@ -35,6 +37,8 @@ class JoySubscriber(Node):
         self.GREEN = 1    # A = stop
         self.YELLOW = 3   # Y = increase speed
         self.RED = 0      # B = decrease speed
+        self.LB = 4 
+        self.RB = 5 
 
         # Left joystick axes
         self.AXIS_X = 0
@@ -58,6 +62,7 @@ class JoySubscriber(Node):
         # Clamp velocity
         self.velocity = max(self.velocity_min,
                             min(self.velocity, self.velocity_max))
+        
 
         # --- DIRECTION FROM LEFT JOYSTICK ---
         x = msg.axes[self.AXIS_X]
@@ -78,6 +83,8 @@ class JoySubscriber(Node):
         out.position_direction = float(direction)
         out.turn_command = False
         out.turn_angle = 0.0
+        out.reset = bool(msg.buttons[self.LB])
+        out.save = bool(msg.buttons[self.RB])
 
         self.publisher_.publish(out)
 

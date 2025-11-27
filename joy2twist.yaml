@@ -16,6 +16,8 @@
       disable_button: 3      # GREEN (A)
       speed_up_button: 1     # YELLOW (Y)
       speed_down_button: 0   # RED (B)
+      reset_button: 4        # LB
+      save_button: 4         # RB
 
       axis:
         linear_x: 1

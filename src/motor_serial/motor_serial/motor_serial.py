@@ -4,7 +4,7 @@ import serial
 import time
 import threading
 from my_parameters.msg import Stm32Data
-from my_parameters.msg import MotorParameters
+from my_parameters.msg import MotorParameters, JoystickParameters
 import signal
 import struct
 from collections import deque
@@ -15,7 +15,7 @@ class MotorSerialNode(Node):
 
         # --- Initialize both serial ports ---
         try:
-            self.ser1 = serial.Serial("/dev/ttyACM0", 115200, timeout=0.1)
+            self.ser1 = serial.Serial("/dev/ttyACM1", 115200, timeout=0.1)
             self.ser1.flushInput()
             self.ser1.flushOutput()
 
@@ -43,10 +43,16 @@ class MotorSerialNode(Node):
         self.relay_commands = bytearray([10, 10])  # Default to stopped
         self.enabled = False
 
+        # Joystick data
+        self.joystick_data = None  # Latest joystick message
+
         self.header = bytearray([83])
         self.terminators = bytearray([0, 55, 69])
         self.debug_pub = self.create_publisher(Stm32Data, '/stm_debug', 10)
         self.create_subscription(Stm32Data, '/StmData', self.stm_data_callback, 20)
+        # Subscribe to joystick commands
+        self.create_subscription(JoystickParameters, '/joystick_command', self.joystick_callback, 20)
+
         self.timer = self.create_timer(0.0005, self.timer_callback)
 
 
@@ -57,6 +63,10 @@ class MotorSerialNode(Node):
     def float_to_byte(self, x):
         x = max(-127, min(127, int(x)))
         return x + 127
+    
+    def joystick_callback(self, msg):
+        """Store latest joystick data."""
+        self.joystick_data = msg
 
     def stm_data_callback(self, msg):
         """ Update motor commands """
@@ -220,7 +230,10 @@ class MotorSerialNode(Node):
             # STM2 -> RR + RL DC motors
             motors = self.motor_commands[6:12]
 
-        data = self.header + motors + self.relay_commands + self.terminators
+        reset_int = int(self.joystick_data.reset) if self.joystick_data else 0
+        save_int = int(self.joystick_data.save) if self.joystick_data else 0
+        data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators
+
         #if len(data) != 16:  # Adjust length if needed
         #    return data  # or None if strict
         #return data
