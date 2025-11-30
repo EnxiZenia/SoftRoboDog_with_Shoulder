@@ -15,7 +15,7 @@ class MotorSerialNode(Node):
 
         # --- Initialize both serial ports ---
         try:
-            self.ser1 = serial.Serial("/dev/ttyACM1", 115200, timeout=0.1)
+            self.ser1 = serial.Serial("/dev/ttyACM0", 115200, timeout=0.1)
             self.ser1.flushInput()
             self.ser1.flushOutput()
 
@@ -87,7 +87,7 @@ class MotorSerialNode(Node):
             self.enabled = True
         elif self.enabled and not msg.enabled:
             self.relay_commands = bytearray([200, 200])
-            self.motor_commands = bytearray([127]*16)
+            self.motor_commands = bytearray([0]*16)
             self.releasing = True
             self.release_start_time = time.time()
             self.enabled = False
@@ -127,8 +127,8 @@ class MotorSerialNode(Node):
                     while len(response) < 16 and time.time() < timeout:
                         response += self.ser1.read(16 - len(response))
 
-                    # if len(response) == 16:
-                    #    self.get_logger().info(f"← Echo ({len(response)} bytes) from STM1: {[b for b in response]}")
+                    #if len(response) == 16:
+                            #self.get_logger().info(f"← Echo ({len(response)} bytes) from STM1: {[b for b in response]}")
                     # else:
                     #    self.get_logger().warn(f"⚠️ Incomplete echo from STM1 ({len(response)} bytes)")
 
@@ -216,6 +216,10 @@ class MotorSerialNode(Node):
     #        self.get_logger().error(f"Error in serial communication: {error}")
 
     def get_data_to_stm32(self, stm=1):
+
+        reset_int = int(self.joystick_data.reset) if self.joystick_data else 0
+        save_int = int(self.joystick_data.save) if self.joystick_data else 0
+        
         if stm == 1:
             # STM1 -> FR + FL DC motors + all servos
             motors_list = [
@@ -226,20 +230,21 @@ class MotorSerialNode(Node):
 
             motors = bytearray(motors_list)
             #motors = self.motor_commands[1] + self.motor_commands[1] + self.motor_commands[1] + self.motor_commands[12:16] #self.motor_commands[0:6] + self.motor_commands[12:16]
+            data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators + bytearray([0])
         else:
             # STM2 -> RR + RL DC motors
-            motors = self.motor_commands[6:12]
+            motors = self.motor_commands[6:9]
+            data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators + bytearray([0, 0, 0, 0, 0])
 
-        reset_int = int(self.joystick_data.reset) if self.joystick_data else 0
-        save_int = int(self.joystick_data.save) if self.joystick_data else 0
-        data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators + bytearray([0])
+        
+        #data = self.header + bytes([reset_int]) + bytes([save_int]) + motors + self.relay_commands + self.terminators + bytearray([0])
 
         #if len(data) != 16:  # Adjust length if needed
         #    return data  # or None if strict
         #return data
         # Make sure data has 16 bytes
-        if len(data) < 16:
-            data += bytearray([0] * (16 - len(data)))
+        #if len(data) < 16:
+        #    data += bytearray([0] * (16 - len(data)))
 
         return data
 
