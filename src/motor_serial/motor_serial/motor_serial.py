@@ -9,13 +9,38 @@ import signal
 import struct
 from collections import deque
 
+class PeakDetector:
+    def __init__(self, min_peak_height=1):
+        self.last_value = 0
+        self.rising = False
+        self.current_peak = 0
+        self.min_peak_height = min_peak_height
+
+    def update(self, value):
+        """Returns peak value when a true peak is detected, otherwise None."""
+        if value > self.last_value:
+            self.rising = True
+            self.current_peak = value
+
+        elif self.rising and value < self.last_value:
+            self.rising = False
+            if self.current_peak >= self.min_peak_height:
+                peak = self.current_peak
+                self.current_peak = 0
+                self.last_value = value
+                return peak
+            self.current_peak = 0
+
+        self.last_value = value
+        return None
+
 class MotorSerialNode(Node):
     def __init__(self):
         super().__init__('motor_serial_node')
 
         # --- Initialize both serial ports ---
         try:
-            self.ser1 = serial.Serial("/dev/ttyACM0", 115200, timeout=0.1)
+            self.ser1 = serial.Serial("/dev/ttyACM2", 115200, timeout=0.1)
             self.ser1.flushInput()
             self.ser1.flushOutput()
 
@@ -40,6 +65,8 @@ class MotorSerialNode(Node):
         self.motors_idle = True #Are ALL motors running or available
         self.pending_motor_commands = deque() #This is the queue of motor commands that gets sent when the motors are idling
 
+        self.peak_detector = PeakDetector(min_peak_height=1)
+
         self.relay_commands = bytearray([10, 10])  # Default to stopped
         self.enabled = False
 
@@ -61,30 +88,34 @@ class MotorSerialNode(Node):
         self.send_motor_commands()
 
     def float_to_byte(self, x):
-        x = max(-127, min(127, int(x)))
-        return x + 127
+        #x = max(-127, min(127, int(x)))
+        return x + 0
     
     def joystick_callback(self, msg):
         """Store latest joystick data."""
         self.joystick_data = msg
 
-    def stm_data_callback(self, msg):
-        """ Update motor commands """
-        #####UPDATED THIS SO IT ADDS TO pending_motor_commands INSTEAD OF MOTOR COMMANDS#####
-        self.pending_motor_commands.append(bytearray([
-        self.float_to_byte(int(msg.motor1_fr)),(int(msg.motor2_fr)), self.float_to_byte((msg.motor3_fr)),
-        self.float_to_byte(int(msg.motor1_fl)), self.float_to_byte((msg.motor2_fl)), self.float_to_byte((msg.motor3_fl)),
-        self.float_to_byte(int(msg.motor1_rr)), self.float_to_byte((msg.motor2_rr)), self.float_to_byte((msg.motor3_rr)),
-        self.float_to_byte(int(msg.motor1_rl)), self.float_to_byte((msg.motor2_rl)), self.float_to_byte((msg.motor3_rl)), 
-        self.float_to_byte(int(msg.step_fr)), self.float_to_byte((msg.step_fl)),
-        self.float_to_byte(int(msg.step_rr)), self.float_to_byte((msg.step_rl))
-    ]))
-        
 
+    def stm_data_callback(self, msg):
+
+        target_value = msg.motor2_fr
+        peak = self.peak_detector.update(target_value)
+
+        if peak is not None:
+            peak_byte = self.float_to_byte(peak)
+            peak_packet = bytearray([peak_byte] * 16)
+            self.pending_motor_commands.append(peak_packet)
+            self.get_logger().info(f"PEAK DETECTED: {peak} → queued")
+
+        if abs(target_value) < 1:
+            zero_packet = bytearray([0] * 16)
+            self.pending_motor_commands.append(zero_packet)
+            self.get_logger().info(f"ZERO detected → queued stop packet")
 
         if not self.enabled and msg.enabled:
             self.relay_commands = bytearray([200, 200])
             self.enabled = True
+
         elif self.enabled and not msg.enabled:
             self.relay_commands = bytearray([200, 200])
             self.motor_commands = bytearray([0]*16)
@@ -92,21 +123,48 @@ class MotorSerialNode(Node):
             self.release_start_time = time.time()
             self.enabled = False
 
+
     def send_motor_commands(self):
         """Send motor commands to both serial devices and log sent/received bytes."""
         try:
-            # Handle relay release timing
+            # # Handle relay release timing
+            # if self.releasing and (time.time() - self.release_start_time > 2.0):
+            #     self.relay_commands = bytearray([10, 10])
+            #     self.releasing = False
+
+
+            # self.get_logger().info(f"We not in this bitch, motors idle: {self.motors_idle}")
+            # self.get_logger().info(f"Current queue length: {len(self.pending_motor_commands)}")
+
+            # if self.motors_idle and self.pending_motor_commands:
+            #     self.get_logger().info(f"Sike! We IN THIS BITCH, motors idle: {self.motors_idle}")
+            #     self.motor_commands = self.pending_motor_commands.popleft() #Pop out the next command in the queue
+
+            
             if self.releasing and (time.time() - self.release_start_time > 2.0):
                 self.relay_commands = bytearray([10, 10])
                 self.releasing = False
 
-
-            self.get_logger().info(f"We not in this bitch, motors idle: {self.motors_idle}")
-            self.get_logger().info(f"Current queue length: {len(self.pending_motor_commands)}")
+            self.get_logger().info(f"Motors idle: {self.motors_idle}")
+            self.get_logger().info(f"Queue length before cleanup: {len(self.pending_motor_commands)}")
 
             if self.motors_idle and self.pending_motor_commands:
-                self.get_logger().info(f"Sike! We IN THIS BITCH, motors idle: {self.motors_idle}")
-                self.motor_commands = self.pending_motor_commands.popleft() #Pop out the next command in the queue
+                # --- Clean up the queue: if next command is zero, jump to latest zero ---
+                if all(b == 0 for b in self.pending_motor_commands[0]):
+                    # find the last zero packet in the queue
+                    last_zero_index = None
+                    for i, packet in enumerate(self.pending_motor_commands):
+                        if all(b == 0 for b in packet):
+                            last_zero_index = i
+                    if last_zero_index is not None:
+                        # remove everything up to the last zero
+                        for _ in range(last_zero_index):
+                            self.pending_motor_commands.popleft()
+                        self.get_logger().info(f"Jumping to most recent ZERO in queue, removed {last_zero_index} stale packets")
+
+                self.motor_commands = self.pending_motor_commands.popleft()
+                self.get_logger().info(f"Sending command: {[b for b in self.motor_commands]}")
+
             
             # Prepare data for STM1 (FR + RL DC motors + all servos)
             data1 = self.get_data_to_stm32(stm=1)
@@ -119,7 +177,7 @@ class MotorSerialNode(Node):
                     self.get_logger().info(f"→ Sending ({len(data1)} bytes) to STM1: {[b for b in data1]}")
                     self.ser1.write(data1)
                     self.ser1.flush()
-                    time.sleep(0.005)  # small delay
+                    time.sleep(0.05)  # small delay
 
                     # Read 16-byte echo from STM1
                     response = bytearray()
