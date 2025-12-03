@@ -67,6 +67,7 @@ class MotorSerialNode(Node):
         self.pending_motor_commands = deque() #This is the queue of motor commands that gets sent when the motors are idling
 
         self.peak_detector = PeakDetector(min_peak_height=1)
+        #self.peak_toggle = True   # Temporary variable
 
         self.relay_commands = bytearray([10, 10])  # Default to stopped
         self.enabled = False
@@ -104,6 +105,8 @@ class MotorSerialNode(Node):
 
         if peak is not None:
             peak_byte = self.float_to_byte(peak)
+            #value = 15 if self.peak_toggle else 0
+            #peak_packet = bytearray([value] * 16)
             peak_packet = (bytearray([
             (int(msg.motor1_fr)), (int(msg.motor2_fr)), (int(msg.motor3_fr)),
             (int(msg.motor1_fl)), (int(msg.motor2_fl)), (int(msg.motor3_fl)),

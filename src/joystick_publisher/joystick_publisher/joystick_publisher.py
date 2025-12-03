@@ -33,10 +33,10 @@ class JoySubscriber(Node):
         # GREEN = A
         # RED = B
         # YELLOW = Y
-        self.BLUE = 2     # X = enable
-        self.GREEN = 1    # A = stop
-        self.YELLOW = 3   # Y = increase speed
-        self.RED = 0      # B = decrease speed
+        self.BLUE = 0     # X = enable
+        self.GREEN = 1    # A = decrease
+        self.YELLOW = 3   # Y = increas
+        self.RED = 2      # B = stop
         self.LB = 4 
         self.RB = 5 
 
@@ -49,14 +49,14 @@ class JoySubscriber(Node):
         if msg.buttons[self.BLUE] == 1:
             self.enabled = True
 
-        if msg.buttons[self.GREEN] == 1:   # Green = stop
+        if msg.buttons[self.RED] == 1:   # Red = stop
             self.enabled = False
 
         # --- SPEED CONTROL ---
         if msg.buttons[self.YELLOW] == 1:  # Yellow = increase speed
             self.velocity += self.velocity_step
 
-        if msg.buttons[self.RED] == 1:     # Red = decrease speed
+        if msg.buttons[self.GREEN] == 1:     # Green = decrease speed
             self.velocity -= self.velocity_step
 
         # Clamp velocity
